@@ -54,4 +54,12 @@ namespace Ockham {
         }
     }
 
+    void Window::setTitle(const std::string& newTitle) {
+        glfwSetWindowTitle(window, newTitle.c_str());
+    }
+
+    double Window::getTime() const {
+        return glfwGetTime();
+    }
+
 }

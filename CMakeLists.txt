@@ -26,6 +26,10 @@ add_executable(Ockham
     src/graphics/backend/Swapchain.h
     src/graphics/backend/Pipeline.cpp
     src/graphics/backend/Pipeline.h
+    src/graphics/Renderer.cpp
+    src/graphics/Renderer.h
+    src/graphics/Model.cpp
+    src/graphics/Model.h
 )
 
 target_include_directories(

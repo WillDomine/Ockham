@@ -25,6 +25,9 @@ namespace Ockham {
 
             //Getter to the raw pointer of the Window
             GLFWwindow* getNativeWindow() const { return window; }
+
+            void setTitle(const std::string& newTitle);
+            double getTime() const;
         
         private:
             //The stored pointer to the Window
