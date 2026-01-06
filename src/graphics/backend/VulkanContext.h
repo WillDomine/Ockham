@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Pipeline.h"
 #include <vulkan/vulkan.h>
 #include <vector>
 #include <iostream>
@@ -36,6 +37,9 @@ namespace Ockham {
             //Getting the logical device
             VkDevice getDevice() const { return logicalDevice; }
 
+            //Get the render pass
+            VkRenderPass getRenderPass() const { return renderPass; }
+
         private:
             //Handles Vulkan Libary
             VkInstance instance;
@@ -58,8 +62,19 @@ namespace Ockham {
             //Presents the Images to the monitor
             VkQueue presentQueue;
 
+            //The render pass tells vulkan about the images we draw to
+            VkRenderPass renderPass;
+
             //Swap Chain Pointer
             std::unique_ptr<Swapchain> swapchain;
+
+            //Pipeline Layout
+            VkPipelineLayout pipelineLayout;
+
+            //Pipeline Pointer
+            std::unique_ptr<Pipeline> pipeline;
+
+            
 
             //Validation Layer to help check code for errors
             const std::vector<const char*> validationLayers = {
@@ -77,6 +92,9 @@ namespace Ockham {
             void pickPhysicalDevice();
             void createLogicalDevice();
             void createSwapChain(Window& window);
+            void createRenderPass();
+            void createPipelineLayout();
+            void createGraphicsPipeline();
 
             bool checkValidationLayerSupport();
             bool isDeviceSuitable(VkPhysicalDevice device);

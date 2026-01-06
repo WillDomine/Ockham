@@ -48,6 +48,9 @@ namespace Ockham {
     VulkanContext::VulkanContext() {}
 
     VulkanContext::~VulkanContext() {
+        pipeline.reset();
+        vkDestroyPipelineLayout(logicalDevice, pipelineLayout, nullptr);
+        vkDestroyRenderPass(logicalDevice, renderPass, nullptr);
         swapchain.reset();
         vkDestroyDevice(logicalDevice, nullptr);
         vkDestroySurfaceKHR(instance, surface, nullptr);
@@ -63,6 +66,9 @@ namespace Ockham {
         pickPhysicalDevice();
         createLogicalDevice();
         createSwapChain(window);
+        createRenderPass();
+        createPipelineLayout();
+        createGraphicsPipeline();
     }
 
     void VulkanContext::createInstance() {
@@ -287,5 +293,92 @@ namespace Ockham {
         }
 
         return requiredExtensions.empty();
+    }
+
+    void VulkanContext::createRenderPass() {
+        VkAttachmentDescription colorAttachment{};
+
+        //Matches the swapchain format
+        colorAttachment.format = swapchain->getImageFormat();
+        //No Multipsample
+        colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+        //Clears values to a constant black at the start
+        colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+        //Will be stored in memory and be able to access later
+        colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+
+        colorAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+        colorAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+
+        //Layout image is in before renderpass
+        colorAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+        //What layout to presnt to the swapchain
+        colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
+
+        VkAttachmentReference colorAttachmentRef{};
+        colorAttachmentRef.attachment = 0; 
+        colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+        VkSubpassDescription subpass{};
+        subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+        subpass.colorAttachmentCount = 1;
+        subpass.pColorAttachments = &colorAttachmentRef;
+
+        //Makes sure the render pass waits for image to be aquired for subpass.
+        VkSubpassDependency dependency{};
+        dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+        dependency.dstSubpass = 0;
+        dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dependency.srcAccessMask = 0;
+        dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
+
+        VkRenderPassCreateInfo renderPassInfo{};
+        renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+        renderPassInfo.attachmentCount = 1;
+        renderPassInfo.pAttachments = &colorAttachment;
+        renderPassInfo.subpassCount = 1;
+        renderPassInfo.pSubpasses = &subpass;
+        renderPassInfo.dependencyCount = 1;
+        renderPassInfo.pDependencies = &dependency;
+
+        if (vkCreateRenderPass(logicalDevice, &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create render pass!");
+        }
+    
+        std::cout << "Render Pass Created" << std::endl;
+    }
+
+    void VulkanContext::createPipelineLayout() {
+        VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
+        pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        pipelineLayoutInfo.setLayoutCount = 0; // No Descriptor Sets (yet)
+        pipelineLayoutInfo.pSetLayouts = nullptr;
+        pipelineLayoutInfo.pushConstantRangeCount = 0; // No Push Constants (yet)
+        pipelineLayoutInfo.pPushConstantRanges = nullptr;
+
+        if (vkCreatePipelineLayout(logicalDevice, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
+            throw std::runtime_error("failed to create pipeline layout!");
+        }
+    }
+
+    void VulkanContext::createGraphicsPipeline() {
+        //Get the default config (Solid triangles, Back-face culling, etc.)
+        PipelineConfigInfo pipelineConfig{};
+        Pipeline::defaultPipelineConfigInfo(pipelineConfig);
+
+        //Plug in the renderpass and layout
+        pipelineConfig.renderPass = renderPass;
+        pipelineConfig.pipelineLayout = pipelineLayout;
+
+        //Create the pointer
+        pipeline = std::make_unique<Pipeline>(
+            logicalDevice, 
+            "assets/shaders/simple_shader.vert.spv", 
+            "assets/shaders/simple_shader.frag.spv", 
+            pipelineConfig
+        );
+        
+        std::cout << "Graphics Pipeline Created" << std::endl;
     }
 }

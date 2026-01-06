@@ -25,7 +25,7 @@ namespace Ockham {
     class Pipeline {
         public:
             //Constructor
-            Pipeline(VkDevice device, const std::string& vertFilepath, const std::string& fragFilepath, const PipelineConfigInfo& configInfo);
+            Pipeline(VkDevice logicalDevice, const std::string& vertFilepath, const std::string& fragFilepath, const PipelineConfigInfo& configInfo);
             //Destructor 
             ~Pipeline();
 

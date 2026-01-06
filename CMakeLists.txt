@@ -24,6 +24,8 @@ add_executable(Ockham
     src/graphics/backend/VulkanContext.h
     src/graphics/backend/Swapchain.cpp
     src/graphics/backend/Swapchain.h
+    src/graphics/backend/Pipeline.cpp
+    src/graphics/backend/Pipeline.h
 )
 
 target_include_directories(
