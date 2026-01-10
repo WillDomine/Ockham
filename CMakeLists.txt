@@ -30,6 +30,7 @@ add_executable(Ockham
     src/graphics/Renderer.h
     src/graphics/Model.cpp
     src/graphics/Model.h
+    src/graphics/vk_mem_alloc.h
 )
 
 target_include_directories(

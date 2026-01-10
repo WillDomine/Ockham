@@ -3,13 +3,15 @@
 #include <array>
 #include <iostream>
 
-namespace Ockham {
+namespace Ockham
+{
 
     const int MAX_FRAMES_IN_FLIGHT = 2;
 
-    Renderer::Renderer(Window& window, VulkanContext& context) 
-        : window(window), context(context) {
-        
+    Renderer::Renderer(Window &window, VulkanContext &context)
+        : window(window), context(context)
+    {
+
         createSwapChain();
         createRenderPass();
         createPipeline();
@@ -20,47 +22,54 @@ namespace Ockham {
         loadModels();
     }
 
-    Renderer::~Renderer() {
+    Renderer::~Renderer()
+    {
         VkDevice device = context.getDevice();
 
         waitIdle();
 
-        for (auto sem : renderFinishedSemaphores) {
+        for (auto sem : renderFinishedSemaphores)
+        {
             vkDestroySemaphore(device, sem, nullptr);
         }
-        for (auto sem : imageAvailableSemaphores) {
+        for (auto sem : imageAvailableSemaphores)
+        {
             vkDestroySemaphore(device, sem, nullptr);
         }
-        for (auto fence : inFlightFences) {
+        for (auto fence : inFlightFences)
+        {
             vkDestroyFence(device, fence, nullptr);
         }
 
         vkDestroyCommandPool(device, commandPool, nullptr);
 
-        for (auto framebuffer : swapChainFramebuffers) {
+        for (auto framebuffer : swapChainFramebuffers)
+        {
             vkDestroyFramebuffer(device, framebuffer, nullptr);
         }
 
-        pipeline.reset(); 
+        pipeline.reset();
         vkDestroyPipelineLayout(device, pipelineLayout, nullptr);
         vkDestroyRenderPass(device, renderPass, nullptr);
-        swapchain.reset(); 
+        swapchain.reset();
     }
 
-    void Renderer::waitIdle() {
+    void Renderer::waitIdle()
+    {
         vkDeviceWaitIdle(context.getDevice());
     }
 
-    void Renderer::createSwapChain() {
+    void Renderer::createSwapChain()
+    {
         swapchain = std::make_unique<Swapchain>(
-            context.getPhysicalDevice(), 
-            context.getDevice(), 
-            context.getSurface(), 
-            window
-        );
+            context.getPhysicalDevice(),
+            context.getDevice(),
+            context.getSurface(),
+            window);
     }
 
-    void Renderer::createRenderPass() {
+    void Renderer::createRenderPass()
+    {
         VkAttachmentDescription colorAttachment{};
         colorAttachment.format = swapchain->getImageFormat();
         colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -97,16 +106,19 @@ namespace Ockham {
         renderPassInfo.dependencyCount = 1;
         renderPassInfo.pDependencies = &dependency;
 
-        if (vkCreateRenderPass(context.getDevice(), &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS) {
+        if (vkCreateRenderPass(context.getDevice(), &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS)
+        {
             throw std::runtime_error("failed to create render pass!");
         }
     }
 
-    void Renderer::createPipeline() {
+    void Renderer::createPipeline()
+    {
         VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
         pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        
-        if (vkCreatePipelineLayout(context.getDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS) {
+
+        if (vkCreatePipelineLayout(context.getDevice(), &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS)
+        {
             throw std::runtime_error("failed to create pipeline layout!");
         }
 
@@ -116,18 +128,19 @@ namespace Ockham {
         pipelineConfig.pipelineLayout = pipelineLayout;
 
         pipeline = std::make_unique<Pipeline>(
-            context.getDevice(), 
-            "assets/shaders/simple_shader.vert.spv", 
-            "assets/shaders/simple_shader.frag.spv", 
-            pipelineConfig
-        );
+            context.getDevice(),
+            "assets/shaders/simple_shader.vert.spv",
+            "assets/shaders/simple_shader.frag.spv",
+            pipelineConfig);
     }
 
-    void Renderer::createFramebuffers() {
+    void Renderer::createFramebuffers()
+    {
         swapChainFramebuffers.resize(swapchain->getImageViews().size());
 
-        for (size_t i = 0; i < swapchain->getImageViews().size(); i++) {
-            VkImageView attachments[] = { swapchain->getImageViews()[i] };
+        for (size_t i = 0; i < swapchain->getImageViews().size(); i++)
+        {
+            VkImageView attachments[] = {swapchain->getImageViews()[i]};
 
             VkFramebufferCreateInfo framebufferInfo{};
             framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
@@ -138,13 +151,15 @@ namespace Ockham {
             framebufferInfo.height = swapchain->getExtent().height;
             framebufferInfo.layers = 1;
 
-            if (vkCreateFramebuffer(context.getDevice(), &framebufferInfo, nullptr, &swapChainFramebuffers[i]) != VK_SUCCESS) {
+            if (vkCreateFramebuffer(context.getDevice(), &framebufferInfo, nullptr, &swapChainFramebuffers[i]) != VK_SUCCESS)
+            {
                 throw std::runtime_error("failed to create framebuffer!");
             }
         }
     }
 
-    void Renderer::createCommandPool() {
+    void Renderer::createCommandPool()
+    {
         QueueFamilyIndices queueFamilyIndices = context.findQueueFamilies(context.getPhysicalDevice());
 
         VkCommandPoolCreateInfo poolInfo{};
@@ -152,12 +167,14 @@ namespace Ockham {
         poolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
         poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily.value();
 
-        if (vkCreateCommandPool(context.getDevice(), &poolInfo, nullptr, &commandPool) != VK_SUCCESS) {
+        if (vkCreateCommandPool(context.getDevice(), &poolInfo, nullptr, &commandPool) != VK_SUCCESS)
+        {
             throw std::runtime_error("failed to create command pool!");
         }
     }
 
-    void Renderer::createCommandBuffers() {
+    void Renderer::createCommandBuffers()
+    {
 
         commandBuffers.resize(MAX_FRAMES_IN_FLIGHT);
 
@@ -167,12 +184,14 @@ namespace Ockham {
         allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
         allocInfo.commandBufferCount = (uint32_t)commandBuffers.size();
 
-        if (vkAllocateCommandBuffers(context.getDevice(), &allocInfo, commandBuffers.data()) != VK_SUCCESS) {
+        if (vkAllocateCommandBuffers(context.getDevice(), &allocInfo, commandBuffers.data()) != VK_SUCCESS)
+        {
             throw std::runtime_error("failed to allocate command buffers!");
         }
     }
 
-    void Renderer::createSyncObjects() {
+    void Renderer::createSyncObjects()
+    {
         imageAvailableSemaphores.resize(MAX_FRAMES_IN_FLIGHT);
         renderFinishedSemaphores.resize(swapchain->getImageViews().size());
         inFlightFences.resize(MAX_FRAMES_IN_FLIGHT);
@@ -182,27 +201,33 @@ namespace Ockham {
 
         VkFenceCreateInfo fenceInfo{};
         fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-        fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT; 
+        fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
 
-        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++) {
+        for (size_t i = 0; i < MAX_FRAMES_IN_FLIGHT; i++)
+        {
             if (vkCreateSemaphore(context.getDevice(), &semaphoreInfo, nullptr, &imageAvailableSemaphores[i]) != VK_SUCCESS ||
-                vkCreateFence(context.getDevice(), &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS) {
+                vkCreateFence(context.getDevice(), &fenceInfo, nullptr, &inFlightFences[i]) != VK_SUCCESS)
+            {
                 throw std::runtime_error("failed to create synchronization objects for a frame!");
             }
         }
 
-        for (size_t i = 0; i < renderFinishedSemaphores.size(); i++) {
-            if (vkCreateSemaphore(context.getDevice(), &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS) {
+        for (size_t i = 0; i < renderFinishedSemaphores.size(); i++)
+        {
+            if (vkCreateSemaphore(context.getDevice(), &semaphoreInfo, nullptr, &renderFinishedSemaphores[i]) != VK_SUCCESS)
+            {
                 throw std::runtime_error("failed to create render finished semaphore!");
             }
         }
     }
 
-    void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex) {
+    void Renderer::recordCommandBuffer(VkCommandBuffer commandBuffer, uint32_t imageIndex)
+    {
         VkCommandBufferBeginInfo beginInfo{};
         beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
-        if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS) {
+        if (vkBeginCommandBuffer(commandBuffer, &beginInfo) != VK_SUCCESS)
+        {
             throw std::runtime_error("failed to begin recording command buffer!");
         }
 
@@ -218,39 +243,42 @@ namespace Ockham {
         renderPassInfo.pClearValues = &clearColor;
 
         vkCmdBeginRenderPass(commandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-            pipeline->bind(commandBuffer);
+        pipeline->bind(commandBuffer);
 
-            // Dynamic State Viewport/Scissor
-            VkViewport viewport{};
-            viewport.x = 0.0f;
-            viewport.y = 0.0f;
-            viewport.width = static_cast<float>(swapchain->getExtent().width);
-            viewport.height = static_cast<float>(swapchain->getExtent().height);
-            viewport.minDepth = 0.0f;
-            viewport.maxDepth = 1.0f;
-            vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
+        // Dynamic State Viewport/Scissor
+        VkViewport viewport{};
+        viewport.x = 0.0f;
+        viewport.y = 0.0f;
+        viewport.width = static_cast<float>(swapchain->getExtent().width);
+        viewport.height = static_cast<float>(swapchain->getExtent().height);
+        viewport.minDepth = 0.0f;
+        viewport.maxDepth = 1.0f;
+        vkCmdSetViewport(commandBuffer, 0, 1, &viewport);
 
-            VkRect2D scissor{};
-            scissor.offset = {0, 0};
-            scissor.extent = swapchain->getExtent();
-            vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
+        VkRect2D scissor{};
+        scissor.offset = {0, 0};
+        scissor.extent = swapchain->getExtent();
+        vkCmdSetScissor(commandBuffer, 0, 1, &scissor);
 
-            model->bind(commandBuffer);
-            model->draw(commandBuffer);
+        model->bind(commandBuffer);
+        model->draw(commandBuffer);
         vkCmdEndRenderPass(commandBuffer);
 
-        if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS) {
+        if (vkEndCommandBuffer(commandBuffer) != VK_SUCCESS)
+        {
             throw std::runtime_error("failed to record command buffer!");
         }
     }
 
-    void Renderer::drawFrame() {
+    void Renderer::drawFrame()
+    {
         vkWaitForFences(context.getDevice(), 1, &inFlightFences[currentFrame], VK_TRUE, UINT64_MAX);
-        
+
         uint32_t imageIndex;
         VkResult result = vkAcquireNextImageKHR(context.getDevice(), swapchain->getSwapchain(), UINT64_MAX, imageAvailableSemaphores[currentFrame], VK_NULL_HANDLE, &imageIndex);
-        
-        if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR) {
+
+        if (result != VK_SUCCESS && result != VK_SUBOPTIMAL_KHR)
+        {
             throw std::runtime_error("failed to acquire swap chain image!");
         }
 
@@ -272,11 +300,12 @@ namespace Ockham {
         submitInfo.pCommandBuffers = &commandBuffers[currentFrame];
 
         VkSemaphore signalSemaphores[] = {renderFinishedSemaphores[imageIndex]};
-        
+
         submitInfo.signalSemaphoreCount = 1;
         submitInfo.pSignalSemaphores = signalSemaphores;
 
-        if (vkQueueSubmit(context.getGraphicsQueue(), 1, &submitInfo, inFlightFences[currentFrame]) != VK_SUCCESS) {
+        if (vkQueueSubmit(context.getGraphicsQueue(), 1, &submitInfo, inFlightFences[currentFrame]) != VK_SUCCESS)
+        {
             throw std::runtime_error("failed to submit draw command buffer!");
         }
 
@@ -294,14 +323,15 @@ namespace Ockham {
         currentFrame = (currentFrame + 1) % MAX_FRAMES_IN_FLIGHT;
     }
 
-    void Renderer::loadModels() {
-    std::vector<Model::Vertex> vertices = {
-        //  X,    Y,      R,   G,   B
-        { 0.0f, -0.5f,  1.0f, 0.0f, 0.0f }, // Top (Red)
-        { 0.5f,  0.5f,  0.0f, 1.0f, 0.0f }, // Bottom Right (Green)
-        {-0.5f,  0.5f,  0.0f, 0.0f, 1.0f }  // Bottom Left (Blue)
-    };
+    void Renderer::loadModels()
+    {
+        std::vector<Model::Vertex> vertices = {
+            //  Position (X, Y)      Color (R, G, B)
+            {{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}}, // Top (Red)
+            {{0.5f, 0.5f}, {0.0f, 1.0f, 0.0f}},  // Bottom Right (Green)
+            {{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}  // Bottom Left (Blue)
+        };
 
-        model = std::make_unique<Model>(context, vertices);
+        model = std::make_unique<Model>(context, context.getAllocator(), vertices);
     }
 }
